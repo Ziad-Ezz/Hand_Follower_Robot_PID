@@ -13,11 +13,12 @@ Utilizing a standard webcam and Google's MediaPipe HandLandmarker, the system tr
 
 ## Table of Contents
 1. [System Overview](#system-overview)
-2. [Control Pipeline](#control-pipeline)
-3. [Mathematical Foundations](#mathematical-foundations)
-4. [PID Tuning & Performance Metrics](#pid-tuning--performance-metrics)
-5. [Getting Started](#getting-started)
-6. [Authors & License](#authors--license)
+2. [Demonstration](#demonstration)
+3. [Control Pipeline](#control-pipeline)
+4. [Mathematical Foundations](#mathematical-foundations)
+5. [PID Tuning & Performance Metrics](#pid-tuning--performance-metrics)
+6. [Getting Started](#getting-started)
+7. [Authors & License](#authors--license)
 
 ---
 
@@ -26,6 +27,14 @@ Utilizing a standard webcam and Google's MediaPipe HandLandmarker, the system tr
 The system was engineered to resolve critical challenges in low-cost robotic teleoperation: stable real-time motion tracking, smooth servo actuation, efficient inverse kinematics (IK) computation, and reliable depth estimation via monocular vision. 
 
 The robot is modeled as a second-order linear time-invariant (LTI) system. Unlike conventional ON/OFF (bang-bang) control algorithms that cause limit cycle oscillations and jerky motions, this framework achieves high responsiveness through analytical trigonometric inverse kinematics, filtered derivative responses, and a multi-threaded system architecture.
+
+---
+
+## Demonstration
+
+[![Watch the Demo Video](assets/demo_thumbnail.png)](https://drive.google.com/file/d/1S6xoT_UW_0Fmtmcjh5kFI4QBbHt33j1y/view)
+
+[cite_start]*Click the image above to view the full project demonstration video, which showcases real-time hand detection, smooth PID-controlled movement, and response to varying hand speeds.*
 
 ---
 
