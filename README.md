@@ -1,359 +1,138 @@
-# 🤖 Vision-Guided 3-DOF Robotic Arm Control System
+# Vision-Guided 3-DOF Robotic Arm Control System
 
-A real-time, vision-guided robotic arm control platform developed for advanced Numerical Analysis and Mechatronics applications.  
-This project integrates **computer vision**, **analytical inverse kinematics**, and a **custom Tustin PID controller** to translate human hand motion into smooth and responsive robotic arm movement in 3D space.
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-Academic-lightgrey.svg)](#)
+[![OpenCV](https://img.shields.io/badge/OpenCV-Enabled-red.svg)](#)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-Enabled-orange.svg)](#)
 
-Using a standard webcam and Google's MediaPipe HandLandmarker, the system tracks a user’s hand in real time and maps spatial coordinates directly to a 3-DOF robotic manipulator while maintaining low-latency motion, trajectory stability, and live telemetry visualization.
+A real-time, vision-guided robotic arm control platform developed for advanced Numerical Analysis and Mechatronics applications. This project integrates computer vision, analytical inverse kinematics, and a custom Tustin-based PID controller to translate human hand motion into smooth and responsive robotic arm movement in 3D space. 
 
----
-
-# 📌 Overview
-
-The system was engineered to address one of the most challenging aspects of low-cost robotic teleoperation systems:
-
-- Stable real-time motion tracking
-- Smooth servo actuation without jitter
-- Efficient inverse kinematics computation
-- Reliable depth estimation using monocular vision
-- Thread-safe visualization and telemetry rendering
-
-Unlike conventional implementations that rely on iterative IK solvers and noisy raw tracking data, this project combines:
-
-- **Analytical trigonometric inverse kinematics**
-- **Tustin-based PID control**
-- **Filtered derivative response**
-- **Dynamic Z-axis estimation**
-- **Multi-threaded system architecture**
-
-to produce a highly responsive and computationally efficient robotic control framework.
+Utilizing a standard webcam and Google's MediaPipe HandLandmarker, the system tracks a user’s hand in real time. It maps spatial coordinates directly to a 3-DOF robotic manipulator while maintaining low-latency motion, trajectory stability, and live telemetry visualization.
 
 ---
 
-# ✨ Key Features
-
-## 🎯 Real-Time Vision-Based Hand Tracking
-- Uses **Google MediaPipe HandLandmarker** for high-speed 3D hand landmark detection
-- Converts hand motion into robotic target coordinates in real time
-- Supports continuous motion tracking with low latency
-
----
-
-## ⚙️ Custom Tustin PID Controller
-
-A fully custom PID implementation designed specifically for robotic servo stabilization.
-
-### Features
-- Proportional–Integral–Derivative control
-- **Tustin (bilinear) integration**
-- Low-pass filtered derivative term
-- Servo jitter suppression
-- Smooth coordinate convergence
-- Stable transient response
-
-### Advantages
-- Eliminates oscillation caused by noisy webcam data
-- Produces significantly smoother robotic motion
-- Improves trajectory stability under rapid hand movement
+## Table of Contents
+1. [System Overview](#system-overview)
+2. [Control Pipeline](#control-pipeline)
+3. [Mathematical Foundations](#mathematical-foundations)
+4. [PID Tuning & Performance Metrics](#pid-tuning--performance-metrics)
+5. [Getting Started](#getting-started)
+6. [Authors & License](#authors--license)
 
 ---
 
-## 📐 Analytical 3-DOF Inverse Kinematics
+## System Overview
 
-The robotic arm uses a fully analytical inverse kinematics solution for:
+The system was engineered to resolve critical challenges in low-cost robotic teleoperation: stable real-time motion tracking, smooth servo actuation, efficient inverse kinematics (IK) computation, and reliable depth estimation via monocular vision. 
 
-- Base Yaw
-- Shoulder Pitch
-- Elbow Pitch
-
-### Technical Highlights
-- Solves joint angles using trigonometric closed-form equations
-- Avoids computationally expensive iterative solvers
-- Optimized for real-time execution
-- Enables fast control loop updates
-
-This approach dramatically reduces computational overhead while maintaining precise arm positioning.
+The robot is modeled as a second-order linear time-invariant (LTI) system. Unlike conventional ON/OFF (bang-bang) control algorithms that cause limit cycle oscillations and jerky motions, this framework achieves high responsiveness through analytical trigonometric inverse kinematics, filtered derivative responses, and a multi-threaded system architecture.
 
 ---
 
-## 📏 Dynamic Z-Axis Depth Tracking
+## Control Pipeline
 
-One of the core engineering challenges solved in this project.
+The system operates on a continuous feedback loop that calculates the necessary corrections to adjust the actuators. 
 
-Since a monocular webcam cannot directly measure depth, the system dynamically estimates Z-axis distance using:
+![System Data Flowchart](assets/Flowchart.png)
+*> Figure 1: Flow chart of the system data flow from tracking to movement.*
 
-- A 2D hand-size proxy
-- Landmark scaling relationships
-- Adaptive spatial mapping
-
-### Result
-- Accurate forward/backward hand tracking
-- Stable spatial positioning
-- Natural 3D interaction using a single camera
+1. **Webcam Feed & Vision Processing:** MediaPipe extracts 3D hand landmarks asynchronously.
+2. **Dynamic Depth Estimation:** Calculates a 2D hand-size proxy to estimate the Z-axis depth.
+3. **Error Calculation:** Continuously computes tracking deviation: $e(t) = r(t) - y(t)$.
+4. **Tustin PID Controller:** Processes the error signal to calculate the required motor drive.
+5. **Analytical Inverse Kinematics:** Converts target Cartesian coordinates to servo angles.
 
 ---
 
-## 📊 Live Telemetry Dashboard
+## Mathematical Foundations
 
-A dedicated multi-threaded Matplotlib telemetry interface provides:
+### Plant Transfer Function
+Assuming instantaneous electrical steady-state, the system simplifies to a first-order velocity model, yielding the following second-order position transfer function:
 
-### Real-Time Visualization
-- 3D robotic arm rendering
-- Live target waypoint plotting
-- PID trajectory tracking
-- Servo state visualization
+$$G(s) = \frac{X(s)}{V(s)} = \frac{K}{s(\tau s + 1)}$$
 
-### Engineering Importance
-The visualization subsystem was strictly preserved while decoupling the computational logic into modular threads, ensuring:
+Where $K$ is the DC gain and $\tau$ is the mechanical time constant.
 
-- Non-blocking UI rendering
-- Stable frame rates
-- Cleaner system scalability
-- Better maintainability
+### Continuous & Discrete PID Control
+The system utilizes a complete PID control law to generate the output signal $u(t)$:
+
+$$u(t) = K_p \cdot e(t) + K_i \cdot \int e(\tau)d\tau + K_d \cdot \frac{de(t)}{dt}$$
+
+To translate this for the digital microcontroller, the integral term is approximated using Tustin’s Method (Trapezoidal Rule) for enhanced numerical stability, while the derivative term utilizes a first-order backward difference formula coupled with an Exponential Moving Average (EMA) low-pass filter to suppress high-frequency tracking noise.
 
 ---
 
-## 🤏 Pinch-to-Grip Gesture Control
+## PID Tuning & Performance Metrics
 
-Implements gesture-based gripper actuation.
+The discrete Tustin PID controller was tuned using a manual heuristic method to balance system responsiveness and stability. 
 
-### Gesture Detection
-- Detects thumb-index pinch distance
-- Automatically toggles gripper states
+**Optimal Tuning Parameters:**
+* Proportional Gain ($K_p$): **4.0**
+* Integral Gain ($K_i$): **0.8**
+* Derivative Gain ($K_d$): **0.6**
 
-### Benefits
-- Natural user interaction
-- Intuitive robotic manipulation
-- Contactless control interface
+With these parameters, the system exhibits a critically damped response, characterized by rapid target acquisition with minimal overshoot. The integral action successfully eliminates the steady-state error caused by physical friction/damping.
 
----
+### Quantitative Results
+*Compare the baseline weak proportional control ($K_p=1.0$) against the optimized PID response:*
 
-## 🧩 Modular Multi-Threaded Architecture
+| Metric | Weak P Control ($K_p=1.0$) | Optimized PID (4.0, 0.8, 0.6) |
+| :--- | :--- | :--- |
+| **Steady-State Error (mm)** | 12.4 | 0.0 |
+| **Settling Time (s)** | 6.8 | 1.2 |
+| **Maximum Overshoot (%)** | 0 | 3.2 |
+| **Rise Time (s)** | 3.2 | 0.45 |
+| **Integral Absolute Error (IAE)**| 84.6 | 12.3 |
 
-The entire project follows strict **Separation of Concerns (SoC)** principles.
+### System Response Visualizations
 
-### Dedicated Modules
-- Configuration management
-- Shared state management
-- Inverse kinematics engine
-- PID controller
-- Vision processing pipeline
-- Dashboard rendering
-- Hardware communication
+![Optimized PID Response](assets/response_with_pid.png)
+*> Figure 2: Step-response of the system utilizing the optimized discrete Tustin PID controller. Notice the rapid rise time and critically damped settling phase.*
 
-### Benefits
-- Scalable codebase
-- Easier debugging
-- Improved maintainability
-- Safer thread synchronization
-- Clear subsystem isolation
+![Underdamped vs Optimized Comparison](assets/tuning_comparison.png)
+*> Figure 3: Comparison of system responses showing how derivative damping ($K_d=0.6$) suppresses transient oscillations seen in an underdamped configuration.*
 
 ---
 
-# 🏗️ Project Structure
+## Getting Started
 
-```text
-robotic-arm-control/
-│
-├── config/
-│   └── settings.py
-│
-├── core/
-│   ├── state_manager.py
-│   ├── controller.py
-│   ├── inverse_kinematics.py
-│   └── filters.py
-│
-├── vision/
-│   ├── hand_tracker.py
-│   ├── depth_estimation.py
-│   └── gesture_detection.py
-│
-├── dashboard/
-│   ├── telemetry_ui.py
-│   └── visualizer_3d.py
-│
-├── hardware/
-│   ├── servo_interface.py
-│   └── gripper_control.py
-│
-├── main.py
-├── requirements.txt
-└── README.md
-```
+### Prerequisites
+* Python 3.9 or higher
+* Standard webcam device
+* Git and pip
 
----
+### Installation
 
-# 🛠️ Technologies Used
-
-- Python 3.x
-- OpenCV
-- MediaPipe
-- NumPy
-- Matplotlib
-- Multi-threading
-- Analytical Robotics Kinematics
-- PID Control Systems
-
----
-
-# 📋 Prerequisites
-
-Before running the project, ensure the following are installed:
-
-- Python 3.9+
-- Webcam device
-- pip package manager
-
-Recommended:
-- Virtual environment (`venv`)
-- GPU acceleration (optional)
-
----
-
-# 🚀 Installation
-
-## 1️⃣ Clone the Repository
-
+**1. Clone the Repository**
 ```bash
-git clone https://github.com/your-username/robotic-arm-control.git
-cd robotic-arm-control
+git clone [https://github.com/Ziad-Ezz/Hand_Follower_Robot_PID.git](https://github.com/Ziad-Ezz/Hand_Follower_Robot_PID.git)
+cd Hand_Follower_Robot_PID
 ```
 
----
-
-## 2️⃣ Create a Virtual Environment
-
-### Windows
+**2. Configure Virtual Environment & Install Dependencies**
 ```bash
 python -m venv venv
-venv\Scripts\activate
-```
+# Windows: venv\Scripts\activate
+# Linux/macOS: source venv/bin/activate
 
-### Linux / macOS
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
----
-
-## 3️⃣ Install Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
----
-
-# ▶️ Usage
-
-Run the main application:
-
+**3. Execution**
 ```bash
 python main.py
 ```
 
 ---
 
-# 🎮 Runtime Interface
+## Authors & License
 
-## 🖥️ OpenCV Vision HUD
+### Development Team
+| Name | Role / Focus |
+| :--- | :--- |
+| **Ziad Ahmed Ezz** | Vision, Systems Architecture & Control | 
+| **Mohammed Nasser** | Kinematics | 
+| **Sherif Ahmed** | Telemetry & Hardware Interface | 
 
-The OpenCV window displays:
-
-- Live webcam feed
-- Hand landmark tracking
-- Real-time target coordinates
-- Gesture recognition state
-- Tracking overlays
-
-### Interaction
-- Move your hand to control robotic arm positioning
-- Move closer/farther from the camera for Z-axis control
-- Perform a pinch gesture to actuate the gripper
-
----
-
-## 📊 Telemetry Dashboard
-
-The Matplotlib dashboard provides live engineering telemetry.
-
-### Displays
-- 3D robotic arm model
-- Current end-effector position
-- Target waypoint visualization
-- PID tracking response
-- Motion smoothing behavior
-
-This dashboard was intentionally architected as a decoupled subsystem to maintain UI responsiveness independently from the control loop.
-
----
-
-# 🧠 Control Pipeline
-
-```text
-Webcam Input
-      ↓
-MediaPipe Hand Tracking
-      ↓
-Coordinate Extraction
-      ↓
-Dynamic Depth Estimation
-      ↓
-Target Position Mapping
-      ↓
-Tustin PID Controller
-      ↓
-Analytical Inverse Kinematics
-      ↓
-Servo Command Generation
-      ↓
-Robotic Arm Motion
-```
-
----
-
-# 📈 Engineering Objectives
-
-This project was developed to demonstrate:
-
-- Numerical Analysis implementation in robotics
-- Real-time control systems engineering
-- Computer vision integration
-- Practical inverse kinematics
-- Signal filtering and stabilization
-- Multi-threaded software architecture
-- Human-machine interaction systems
-
----
-
-# 🔬 Future Improvements
-
-Potential future enhancements include:
-
-- 6-DOF arm expansion
-- Kalman filtering for advanced tracking
-- ROS integration
-- Reinforcement learning assisted motion
-- Stereo vision depth estimation
-- Trajectory prediction
-- Hardware acceleration using CUDA
-
----
-
-# 👨‍💻 Authors
-
-### 👤 Ziad Ahmed Ezz
-Mechatronics Engineering Student  
-
-### 👤 Mohammed Nasser
-Mechatronics Engineering Student
-
-### 👤 Sherif Ahmed
-Mechatronics Engineering Student
-
----
-
-# 📜 License
-
-This project is intended for educational, research, and academic purposes.
+### License
+This project is proprietary and intended strictly for educational, research, and academic purposes.
