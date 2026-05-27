@@ -114,7 +114,7 @@ With these parameters, the system exhibits a critically damped response, charact
 
 **1. Clone the Repository**
 ```bash
-git clone [https://github.com/Ziad-Ezz/Hand_Follower_Robot_PID.git](https://github.com/Ziad-Ezz/Hand_Follower_Robot_PID.git)
+git clone https://github.com/Ziad-Ezz/Hand_Follower_Robot_PID.git
 cd Hand_Follower_Robot_PID
 ```
 
